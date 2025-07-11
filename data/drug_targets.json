@@ -1,0 +1,22 @@
+{
+    "PARP_inhibitor": {
+        "targets": ["BRCA1", "BRCA2"],
+        "effect": { "dna_repair": -0.3}
+    },
+    "MEK_inhibitor": {
+        "targets": ["KRAS"],
+        "effect": { "proliferation": -0.4}
+    },
+    "Nutlin_3": {
+        "targets": ["TP53"],
+        "effect": { "apoptosis": 0.3}
+    },
+    "EGFR_inhibitor": {
+        "targets": ["EGFR"],
+        "effect": { "proliferation": -0.4}
+    },
+    "mTor_inhibitor": {
+        "targets": ["PIK3CA"],
+        "effect": { "proliferation": -0.3}
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "TP53": { "mutation": {"apoptosis": -0.4 } },
+    "KRAS": { "mutation": { "proliferation": 0.5 } },
+    "BRCA1": { "mutation": {"dna_repair": -0.5}},
+    "PTEN": { "mutation": {"proliferation": 0.3}},
+    "EGFR": { "mutation": {"proliferation": 0.4}},
+    "PIK3CA": { "mutation": {"proliferation": 0.4}},
+    "RB1": { "mutation": {"proliferation": 0.3}},
+    "CDKN2A": { "mutation": {"proliferation": 0.2}},
+    "ATM": { "mutation": {"dna_repair": -0.3}},
+    "MYC": { "mutation": {"proliferation": 0.5}}
+}
