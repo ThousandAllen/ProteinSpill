@@ -5,6 +5,7 @@
 import json
 import random
 import uuid
+from fitness import build_fitness_genes
 
 # === 1. Load Mutation Frequencies ===
 with open('mutation_frequencies.json', 'r') as f:
@@ -14,6 +15,7 @@ with open('mutation_frequencies.json', 'r') as f:
 total = sum(gene_freqs.values())
 gene_probs = {gene: freq / total for gene, freq in gene_freqs.items()}
 
+# ======== NEEDS UPDATED TO INCLUDE ALL DRIVER GENES ==================
 DRIVER_GENES = {
         "TP53", "PIK3CA", "BRCA1", "BRCA2", "PTEN", "KRAS", "BRAF", "CDKN2A", "RB1",
         "AKT1", "ERBB2", "EGFR", "ATM", "ARID1A", "SMAD4", "NF1", "NOTCH1", "IDH1",
@@ -22,37 +24,40 @@ DRIVER_GENES = {
         "RUNX1", "FLT3", "DNMT3A", "TERT", "APC", "VHL", "POLE", "SMARCA4", "SUZ12"
         } 
 
-# === Placeholder fitness values ===
-FITNESS_GENES = {
-    "TP53": 0.3,
-    "PIK3CA": 0.2,
-    "BRCA1": 0.25,
-    "KRAS": 0.35,
-    "BRAF": 0.25,
-    "EGFR": 0.3,
-    "MYC": 0.2
+
+MUTATION_TYPES = ["missense", "truncating", "frameshift", "inframe"]
+
+TYPE_MULTIPLIER = {
+    "missense": 0.5,
+    "truncating":1.0,
+    "frameshift": 0.8,
+    "inframe": 0.6
 }
 
 # === 2. Virtual Cell Class ===+
 class VirtualCell:
-    def __init__(self, gene_probs, parent_id=None):
-        self.genome = {gene: False for gene in gene_probs}
+    def __init__(self, gene_probs, fitness_genes):
+        self.genome = {gene: [] for gene in gene_probs}
         self.mutation_history = []
         self.driver_genes = DRIVER_GENES
         self.id = str(uuid.uuid4())[:8]
-        self.parent_id = parent_id
         self.lineage = []
+        self.fitness=1.0
+        self.gene_probs = gene_probs
+        self.fitness_genes = fitness_genes
 
     #Mutate - Simulates mutating 1 cell.
     #Environment Factor is for things like smoking, or being exposed to a lot of UV
     def mutate(self, gene_probs, mutation_rate=0.001, env_factor=1.0):
         for gene, prob in gene_probs.items():
-            if not self.genome[gene]: #only mutate unmutated genes
-                mut_chance = mutation_rate * prob * env_factor
-                if random.random() < mut_chance:
-                    self.genome[gene] = True
-                    self.mutation_history.append(gene)
-        
+            mut_chance = mutation_rate * prob * env_factor
+            if random.random() < mut_chance:
+                mutation_type = random.choice(MUTATION_TYPES)
+                self.genome[gene].append(mutation_type)
+                self.mutation_history.append((gene, mutation_type))
+
+        self.fitness = self.get_fitness()
+    
 
     # Define cancer-like state: 5+ total mutations & ≥1 from "critical" list
     def is_cancerous(self):     
@@ -61,26 +66,32 @@ class VirtualCell:
     
     #Let certain mutation make the cell more likely to survive or mutate farther
     def get_fitness(self):
-        fitness = 1.0
-        for gene, mutated in self.genome.items():
-            if mutated:
-                fitness += FITNESS_GENES.get(gene, 0)
-        return fitness
+        base_fitness = 1.0
+        for gene, mutations in self.genome.items():
+            if gene in self.fitness_genes:
+                for mutation_type in mutations:
+                    multiplier = TYPE_MULTIPLIER.get(mutation_type, 0.5)
+                    base_fitness += (self.fitness_genes[gene]*multiplier)
+        return base_fitness
 
     #Divide the cell into 2
     def divide(self):
-        child = VirtualCell(gene_probs, parent_id=self.id)
-        child.genome = self.genome.copy()
+        child = VirtualCell(self.gene_probs, self.fitness_genes)
+        child.genome = {gene: muts.copy() for gene, muts in self.genome.items()}
         child.mutation_history = self.mutation_history.copy()
+        child.fitness = self.fitness
         child.lineage = self.lineage + [self.id]
+        for gene, muts in self.genome.items():
+            if muts: 
+                print(f"{gene}: {', '.join(muts)}")
         return child
 
     def get_final_genome(self):
         return sorted([g for g, v in self.genome.items() if v])
     
 
-def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mutation_rate=0.01, env_factor=1.0):
-    population = [VirtualCell(gene_probs) for _ in range(num_initial_cells)]
+def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mutation_rate=0.01, env_factor=1.0, fitness_genes=None):
+    population = [VirtualCell(gene_probs, fitness_genes) for _ in range(num_initial_cells)]
     cancerous_cells = []
     lineage_tree = {}
 
@@ -110,4 +121,5 @@ def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mu
 
 # === 4. Run the Simulation ===
 if __name__ == "__main__":
-    simulate_population(gene_probs, num_initial_cells=10, max_generations=100, mutation_rate=0.01, env_factor=2)
+    fitness_genes=build_fitness_genes("data/CRISPRGeneEffect.csv")
+    simulate_population(gene_probs, num_initial_cells=2, max_generations=100, mutation_rate=0.01, env_factor=2, fitness_genes=fitness_genes)
