@@ -4,6 +4,8 @@
 
 import json
 import random
+import uuid
+
 # === 1. Load Mutation Frequencies ===
 with open('mutation_frequencies.json', 'r') as f:
     gene_freqs = json.load(f)
@@ -33,10 +35,13 @@ FITNESS_GENES = {
 
 # === 2. Virtual Cell Class ===+
 class VirtualCell:
-    def __init__(self, gene_probs):
+    def __init__(self, gene_probs, parent_id=None):
         self.genome = {gene: False for gene in gene_probs}
         self.mutation_history = []
         self.driver_genes = DRIVER_GENES
+        self.id = str(uuid.uuid4())[:8]
+        self.parent_id = parent_id
+        self.lineage = []
 
     #Mutate - Simulates mutating 1 cell.
     #Environment Factor is for things like smoking, or being exposed to a lot of UV
@@ -74,49 +79,35 @@ class VirtualCell:
         return sorted([g for g, v in self.genome.items() if v])
     
 
-# Simulate Cell - Simulates mutating 1 cell
-def simulate_cell(gene_probs, max_generations=100, mutation_rate=0.01, dynamic = False, env_factor=1.0): 
-    cell = VirtualCell(gene_probs)
+def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mutation_rate=0.01, env_factor=1.0):
+    population = [VirtualCell(gene_probs) for _ in range(num_initial_cells)]
+    cancerous_cells = []
+    lineage_tree = {}
+
     for gen in range(1, max_generations + 1):
+        new_population = []
 
-        # Dynamic Mutation Rate -------------------------
-        rate=mutation_rate
-        if dynamic:
-            if gen<20:
-                rate = mutation_rate*0.1
-            elif gen < 50:
-                rate=mutation_rate * 0.5
-            else:
-                rate=mutation_rate
-        # ------------------------------------------------
-        
-        cell.mutate(gene_probs, rate)
-        if cell.is_cancerous():
-            return True, gen
-    return False, None
+        for cell in population:
+            cell.mutate(gene_probs, mutation_rate, env_factor)
 
+            if cell.is_cancerous() and cell.id not in cancerous_cells:
+                cancerous_cells.append(cell.id)
+                lineage_tree[cell.id] = cell.lineage
 
-#Simulate Population - Simulates many cells
-def simulate_population(gene_probs, num_cells, max_generations=100, mutation_rate=0.01,  dynamic = False, env_factor=1.0):
-    population = [VirtualCell(gene_probs)]
-    cancerous_count = 0
-    cancer_timing = []
+            fitness = cell.get_fitness()
+            if random.random() < min(fitness * 0.05, 1.0):
+                child = cell.divide()
+                new_population.append(child)
 
-    #For every cell, simulate the cell. Keep count of how many are cancerous
-    for i in range(num_cells):
-        is_cancer, gen = simulate_cell(gene_probs, max_generations=max_generations, mutation_rate=mutation_rate, dynamic=dynamic, env_factor=1.0)
-        if is_cancer:
-            cancerous_count += 1
-            cancer_timing.append(gen)
+        population.extend(new_population)
 
-    print(f"\n Simulated {num_cells} cells")
-    print(f" {cancerous_count} became cancerous")
-    if cancer_timing:
-        avg_gen = sum(cancer_timing) / len(cancer_timing)
-        print(f" Avg generation of cancer emergence: {avg_gen:.2f}")
-    else:
-        print(" No tumors formed")
+    print(f"🔬 Simulated {len(population)} total cells over {max_generations} generations")
+    print(f"💥 {len(cancerous_cells)} became cancerous")
+    print("🌳 Example lineage trees:")
+    for cid in cancerous_cells[:5]:
+        print(f"  {cid}: {' → '.join(lineage_tree[cid])} → {cid}" if lineage_tree[cid] else f"  {cid}: [original]")
+
 
 # === 4. Run the Simulation ===
 if __name__ == "__main__":
-    simulate_population(gene_probs, num_cells=1000, max_generations=100, mutation_rate=0.01, dynamic=True)
+    simulate_population(gene_probs, num_initial_cells=10, max_generations=100, mutation_rate=0.01, env_factor=2)
