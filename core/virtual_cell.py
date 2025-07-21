@@ -17,19 +17,20 @@ DRIVER_GENES = {
         } 
 
 
-MUTATION_TYPES = ["missense", "truncating", "frameshift", "inframe"]
+MUTATION_TYPES = ["missense", "truncating", "frameshift", "inframe", "nonsense"]
 
 TYPE_MULTIPLIER = {
     "missense": 0.5,
     "truncating":1.0,
     "frameshift": 0.8,
-    "inframe": 0.6
+    "inframe": 0.6,
+    "nonsense": 0.1
 }
 
 # === 2. Virtual Cell Class ===+
 class VirtualCell:
-    def __init__(self, gene_probs, fitness_genes):
-        self.genome = {gene: [] for gene in gene_probs}
+    def __init__(self, gene_probs, fitness_genes, drug_database):
+        self.genome = {gene: [] for gene in gene_probs} 
         self.mutation_history = []
         self.driver_genes = DRIVER_GENES
         self.id = str(uuid.uuid4())[:8]
@@ -37,6 +38,7 @@ class VirtualCell:
         self.fitness=1.0
         self.gene_probs = gene_probs
         self.fitness_genes = fitness_genes
+        self.drug_database = drug_database
 
     #Mutate - Simulates mutating 1 cell.
     #Environment Factor is for things like smoking, or being exposed to a lot of UV
@@ -68,7 +70,7 @@ class VirtualCell:
 
     #Divide the cell into 2
     def divide(self):
-        child = VirtualCell(self.gene_probs, self.fitness_genes)
+        child = VirtualCell(self.gene_probs, self.fitness_genes, self.drug_database)
         child.genome = {gene: muts.copy() for gene, muts in self.genome.items()}
         child.mutation_history = self.mutation_history.copy()
         child.fitness = self.fitness

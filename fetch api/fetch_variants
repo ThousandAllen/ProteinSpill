@@ -1,0 +1,72 @@
+# fetch_variants_all_studies.py
+
+import pybioportal
+import time
+import csv
+
+import pybioportal.molecular_profiles
+import pybioportal.mutations
+import pybioportal.sample_lists
+import pybioportal.studies
+
+import pandas as pd
+
+pd.set_option('display.max_columns',None)
+pd.set_option('display.max_rows',None)
+
+MAX_MUTATIONS_PER_STUDY = 100
+all_variants = []
+
+def fetch_study_variants(study_id):
+    try:
+        profiles = pybioportal.molecular_profiles.get_all_molecular_profiles_in_study(study_id)
+        muts = [p for p in profiles if "mutation" in p["molecularProfileId"]]
+        
+        if not muts:
+            return []
+        
+        mol_profile_id = muts[0]["molecularProfileId"]
+
+        sample_lists = pybioportal.sample_lists.get_all_sample_lists(study_id)
+        sample_list_id = next(
+            (s["sampleListId"] for s in sample_lists if "all" in s["sampleListId"]),
+            sample_lists[0]["sampleListId"]
+        )
+
+        mutations = pybioportal.mutations.get_muts_in_mol_prof_by_sample_list_id(
+            molecular_profile_id=mol_profile_id,
+            sample_list_id=sample_list_id
+        )
+
+        variant_tuples = []
+        for m in mutations[:MAX_MUTATIONS_PER_STUDY]:
+            chrom = str(m.get("chromosome"))
+            pos = m.get("startPosition")
+            ref = m.get("referenceAllele")
+            alt = m.get("variantAllele")
+
+            if all([chrom, pos, ref, alt]) and ref != alt:
+                variant_tuples.append((chrom, pos, ref, alt))
+
+        print(f"✅ {study_id}: {len(variant_tuples)} variants")
+        return variant_tuples
+
+    except Exception as e:
+        print(f"❌ Failed on {study_id}: {e}")
+        return []
+
+# MAIN
+studies = pybioportal.studies.get_all_studies()
+
+for sid in studies["studyId"]:
+    variants = fetch_study_variants(sid)
+    all_variants.extend(variants)
+    time.sleep(1)
+
+# SAVE TO CSV
+with open("all_variants.csv", "w") as f:
+    writer = csv.writer(f)
+    writer.writerow(["chrom", "pos", "ref", "alt"])
+    writer.writerows(all_variants)
+
+print(f"\n✅ Done: {len(all_variants)} total variants saved to all_variants.csv")

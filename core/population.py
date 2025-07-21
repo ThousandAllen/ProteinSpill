@@ -1,8 +1,9 @@
 from core.virtual_cell import VirtualCell
 import random
+from core.drug_modeling import apply_drugs
 
-def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mutation_rate=0.01, env_factor=1.0, fitness_genes=None):
-    population = [VirtualCell(gene_probs, fitness_genes) for _ in range(num_initial_cells)]
+def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mutation_rate=0.01, env_factor=1.0, fitness_genes=None, drug_db = None):
+    population = [VirtualCell(gene_probs, fitness_genes, drug_db) for _ in range(num_initial_cells)]
     cancerous_cells = []
     lineage_tree = {}
 
@@ -11,6 +12,7 @@ def simulate_population(gene_probs, num_initial_cells=10, max_generations=50, mu
 
         for cell in population:
             cell.mutate(gene_probs, mutation_rate, env_factor)
+            apply_drugs(cell)
 
             if cell.is_cancerous() and cell.id not in cancerous_cells:
                 cancerous_cells.append(cell.id)
