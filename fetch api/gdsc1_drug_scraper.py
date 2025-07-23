@@ -1,5 +1,8 @@
 import pandas as pd
 
+#This us used to create a JSON from the GDSC 1 file.
+#I am no longer using the GDSC 1 file
+
 def parse_gdsc_to_drug_db(ic50_file, annotations_file):
     # Load IC50 data
     ic50_df = pd.read_excel(ic50_file)
@@ -49,7 +52,8 @@ if __name__ == "__main__":
 
     # Output to JSON for easy import
     import json
-    with open("./data/drug_database.json", "w") as f:
+    with open("./data/" \
+    "drug_database.json", "w") as f:
         json.dump(drug_database, f, indent=4)
 
     print(f"Extracted {len(drug_database)} drugs with targets.")

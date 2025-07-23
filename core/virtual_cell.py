@@ -55,8 +55,10 @@ class VirtualCell:
 
     # Define cancer-like state: 5+ total mutations & ≥1 from "critical" list
     def is_cancerous(self):     
-        mutated= {gene for gene, mutated in self.genome.items() if mutated}
-        return len(mutated) >= 5 and bool(mutated & DRIVER_GENES)
+        mutated_genes = {gene for gene, mutated in self.genome.items() if mutated}
+        has_enough_mutations = len(mutated_genes) >= 5
+        has_driver_mutation = bool(mutated_genes & DRIVER_GENES)
+        return has_enough_mutations and has_driver_mutation
     
     #Let certain mutation make the cell more likely to survive or mutate farther
     def get_fitness(self):
